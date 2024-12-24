@@ -1,0 +1,38 @@
+?program: stmt+
+?stmt: print_stmt | def_stmt | exp
+?print_stmt: "(print-num" exp ")" -> print_num
+            | "(print-bool" exp ")" -> print_bool
+?exp: bool_val | number | variable | num_op | logical_op | if_exp | fun_exp | fun_call
+?num_op: plus | minus | multiply | divide | modulus | greater | smaller | equal
+    plus: "(+" exp exp+ ")"
+    minus: "(-" exp exp ")"
+    multiply: "(*" exp exp+ ")"
+    divide: "(/" exp exp ")"
+    modulus: "(mod" exp exp ")"
+    greater: "(>" exp exp ")"
+    smaller: "(<" exp exp ")"
+    equal: "(=" exp exp+ ")"
+?logical_op: not_op | and_op | or_op
+    and_op: "(and" exp exp+ ")"
+    or_op: "(or" exp exp+ ")"
+    not_op: "(not" exp ")"
+?def_stmt: "(define" variable exp ")"
+    variable: id
+?fun_exp: "(fun" fun_ids fun_body ")"
+    fun_ids: "(" id* ")"
+    fun_body: exp
+?fun_call: "(" fun_exp param* ")" | "(" fun_name param* ")"
+    param: exp
+    last_exp: exp
+    fun_name: id
+?if_exp: "(if" test_exp than_exp else_exp ")"
+    test_exp: exp
+    than_exp: exp
+    else_exp: exp
+
+number: /0|-?[1-9]\d*/
+id: /[a-z]([a-z0-9-])*/
+bool_val: /#t|#f/
+
+%import common.WS
+%ignore WS 
