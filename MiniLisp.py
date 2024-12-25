@@ -22,7 +22,8 @@ def type_check(parameter, type_):
 
 global_env = {}
 
-def eval_ast(tree, param=None, local_env=None, fun_ids=False, def_fun=False):
+def eval_ast(tree, param=None, local_env=None, fun_ids=False, def_fun=False, def_nested_fun=False):
+    # print("cur tree: " + tree.data)
     # if local_env:
     #     print(tree.data + " local_env: " + str(local_env))
     if tree.data == 'program':
@@ -33,6 +34,10 @@ def eval_ast(tree, param=None, local_env=None, fun_ids=False, def_fun=False):
         # print(tree.children)
         var = eval_ast(tree.children[0])
         val = eval_ast(tree.children[1], def_fun=True)
+
+        if def_nested_fun:
+            return {var: val}
+
         global_env[var] = val
         # print("def_stmt var: " + var)
         # print("def_stmt val: " + str(val))
@@ -42,7 +47,7 @@ def eval_ast(tree, param=None, local_env=None, fun_ids=False, def_fun=False):
     elif tree.data == 'print_num':
         # print(tree.children)
         val = eval_ast(tree.children[0])
-        print("print_num: " + str(val))
+        print(str(val))
     elif tree.data == 'print_bool':
         # print(tree.children)
         val = eval_ast(tree.children[0])
@@ -207,12 +212,12 @@ def eval_ast(tree, param=None, local_env=None, fun_ids=False, def_fun=False):
             param.append(eval_ast(tree.children[i], local_env=local_env))
         # print("parm:", param)
         # print(param)
-        result = eval_ast(tree.children[0], param=param)
+        result = eval_ast(tree.children[0], param=param, local_env=local_env)
         # print("fun_call: " + str(result))
         return result
     elif tree.data == 'param':
         # print(tree.children)
-        return eval_ast(tree.children[0], local_env=local_env)
+        return eval_ast(tree.children[0], local_env=local_env, def_fun=True)
     elif tree.data == 'fun_exp':
         # print(tree.children)
         if def_fun:
@@ -238,20 +243,31 @@ def eval_ast(tree, param=None, local_env=None, fun_ids=False, def_fun=False):
         # print("fun_ids: " + str(local_vars))
         return local_vars
     elif tree.data == 'fun_body':
+        # result = eval_ast(tree.children[0], local_env=local_env)
         # print(tree.children)
-        result = eval_ast(tree.children[0], local_env=local_env)
+        result = None
+        for child in tree.children:
+            if child.data == 'def_stmt':
+                local_fun = eval_ast(child, local_env=local_env, def_nested_fun=True)
+                # print("local_fun:", local_fun)
+                local_env.update(local_fun)
+            else:
+                # print("else child:", child)
+                # print("local_env:", local_env)
+                result = eval_ast(child, local_env=local_env)
         # print("fun_body: " + str(result))
         return result
     elif tree.data == 'fun_name':
-        fun_var = eval_ast(tree.children[0])
-        # print("fun_var:", fun_var)
+        fun_tree = eval_ast(tree.children[0], local_env=local_env)
+        # print("fun_tree:", fun_tree)
         # print("param:", param)
-        result = eval_ast(fun_var, param=param)
+        result = eval_ast(fun_tree, param=param)
         # print("fun_name: " + str(result))
         return result
     elif tree.data == 'id':
         # print(tree.children)
         # print("id: " + tree.children[0])
+        # print("id check local_env:", local_env)
         if local_env and tree.children[0] in local_env:
             return local_env[tree.children[0]]
         if not fun_ids and tree.children[0] in global_env:
@@ -278,8 +294,6 @@ for root, dirs, files in os.walk(folder_path):
         try:
             with open(file_path, "r", encoding="utf-8") as file:
                 code = file.read()
-                # print("檔案內容:")
-                # print(content)
         except FileNotFoundError:
             print(f"檔案 {file_path} 不存在。")
         except Exception as e:
@@ -289,7 +303,10 @@ for root, dirs, files in os.walk(folder_path):
         # """
 
         print(file_path)
+        # print("檔案內容:")
+        # print(code)
         try:
+            global_env = {} # 清空環境
             tree = mini_lisp_parser.parse(code)
             # print(tree.pretty())
             eval_ast(tree)
